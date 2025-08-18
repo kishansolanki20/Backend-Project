@@ -1,5 +1,5 @@
 import asynchandler from "../utils/asynchandler.js";
-import User from "../models/user.models.js";
+import { User } from "../models/user.models.js";
 import ApiError from "../utils/ApiError.js";
 import uploadOnCloudinary from "../utils/cloudinary.js";
 import ApiResponse from "../utils/ApiResponse.js";
@@ -14,7 +14,7 @@ const registerUser = asynchandler(async (req, res) => {
     }
 
     // Here you would typically check user exist or not
-    const existedUser = User.findOne({ 
+    const existedUser = await User.findOne({ 
         $or: [ 
             {email: email}, 
             {username: username} 
@@ -26,7 +26,12 @@ const registerUser = asynchandler(async (req, res) => {
 
     // check for avatar and cover image
     const avatarLocalPath = req.files?.avatar[0]?.path
-    const coverImageLocalPath = req.files?.coverimage[0]?.path
+    //const coverImageLocalPath = req.files?.coverimage[0]?.path
+
+    let coverImageLocalPath;
+    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverimage.length > 0) {
+        coverImageLocalPath = req.files.coverimage[0].path;
+    }
 
     if(!avatarLocalPath) {
         throw new ApiError(400, "Avatar is required")
