@@ -70,4 +70,111 @@ const registerUser = asynchandler(async (req, res) => {
 
 })
 
-export { registerUser };
+const loginUser = asynchandler(async (req, res) => {
+    // login logic will go here
+    
+    // Get login details from request body
+    // Find the user in the database
+    // Check if the password matches
+    // Access and refresh token generation
+    // Send cookies
+
+
+    // login details
+    const {email, username, password} = req.body
+
+    // validation
+    if(!username || !email) {
+        throw new ApiError(400, "Username or email are required")
+    }
+
+    // check if user exists
+    const userFound = await User.findOne({
+        $or: [
+            {email: email},
+            {username: username}
+        ]
+    })
+
+    if(!userFound) {
+        throw new ApiError(404, "User not found")
+    }
+
+    // check if password is matches
+    const passworkCheck = await userFound.isPasswordCorrect(password)
+    
+    if(!passworkCheck) {
+        throw new ApiError(401, "Invalid password")
+    }
+
+    // generate access and refresh tokens
+    const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(userFound._id)
+
+    // we have to call database for user details again
+    // beacause we don't want to send password and refresh token in response
+    // and we do not have refreshtoken in above userFound
+    // as we save it in fuction generateAccessAndRefreshTokens 
+    const loggedInUser = await User.findById(userFound._id).select("-password -refreshtoken")
+
+    const options = {
+        httpOnly: true,
+        secure: true  // now server can modify cookies, beforethat anyone can modify cookies bydefault
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json
+    (
+        new ApiResponse(200,{ loggedInUser, accessToken, refreshToken }, "User logged in successfully")
+    )
+
+})
+
+const logoutUser = asynchandler(async (req, res) => {
+    await User.findByIdAndUpdate(req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true
+        }
+    )
+    const options = {
+        httpOnly: true,
+        secure: true,  // now server can modify cookies, beforethat anyone can modify cookies bydefault
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out successfully"))
+})
+
+export { registerUser, loginUser, logoutUser};
+
+
+
+const generateAccessAndRefreshTokens = async (userId) => {
+    try {
+        const user = await User.findById(userId)
+
+        // Generate access token
+        const accessToken = user.generateAccessToken();
+        
+        // Generate refresh token
+        const refreshToken = user.generateRefreshToken();
+        
+        // Save refresh token in the user document
+        user.refreshtoken = refreshToken;
+        await user.save({ validateBeforeSave: false });
+
+        return { accessToken, refreshToken };
+    } catch (error) {
+        throw new ApiError(500, "Error generating tokens");
+    }
+} 
