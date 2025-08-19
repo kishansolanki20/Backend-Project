@@ -29,7 +29,7 @@ const registerUser = asynchandler(async (req, res) => {
     //const coverImageLocalPath = req.files?.coverimage[0]?.path
 
     let coverImageLocalPath;
-    if(req.files && Array.isArray(req.files.coverImage) && req.files.coverimage.length > 0) {
+    if(req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length > 0) {
         coverImageLocalPath = req.files.coverimage[0].path;
     }
 
@@ -42,7 +42,7 @@ const registerUser = asynchandler(async (req, res) => {
     const coverImageResponse = await uploadOnCloudinary(coverImageLocalPath)
 
     // check avatar upload response
-    if(!avatarResponse) {
+    if(avatarResponse==null) {
         throw new ApiError(400, "Avatar upload failed")
     }
 
