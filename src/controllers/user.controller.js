@@ -84,7 +84,7 @@ const loginUser = asynchandler(async (req, res) => {
     const {email, username, password} = req.body
 
     // validation
-    if(!username || !email) {
+    if(!username && !email) {
         throw new ApiError(400, "Username or email are required")
     }
 
@@ -118,7 +118,7 @@ const loginUser = asynchandler(async (req, res) => {
 
     const options = {
         httpOnly: true,
-        secure: true  // now server can modify cookies, beforethat anyone can modify cookies bydefault
+        secure: true  // now only server can modify cookies, beforethat anyone can modify cookies bydefault
     }
 
     return res
